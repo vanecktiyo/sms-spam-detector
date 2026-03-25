@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> SMS Spam Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .input-group {
+            margin-bottom: 30px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-predict {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-clear {
+            background: #f0f0f0;
+            color: #333;
+            flex: 1;
+        }
+
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-predict:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result.spam {
+            background: #fee;
+            border-left: 5px solid #e74c3c;
+        }
+
+        .result.ham {
+            background: #efe;
+            border-left: 5px solid #27ae60;
+        }
+
+        .result-label {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .result.spam .result-label {
+            color: #c0392b;
+        }
+
+        .result.ham .result-label {
+            color: #229954;
+        }
+
+        .confidence-meter {
+            margin-bottom: 15px;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+            color: #555;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+
+        .result.spam .progress-fill {
+            background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .result.ham .progress-fill {
+            background: linear-gradient(90deg, #27ae60 0%, #229954 100%);
+        }
+
+        .message-preview {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+            border-left: 3px solid #999;
+        }
+
+        .error {
+            background: #fee;
+            border-left: 5px solid #e74c3c;
+            color: #c0392b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .examples {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+
+        .examples h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .example-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-size: 0.95em;
+            color: #555;
+        }
+
+        .example-btn:hover {
+            background: #efefef;
+            border-color: #667eea;
+        }
+
+        .example-btn.spam {
+            border-left: 3px solid #e74c3c;
+        }
+
+        .example-btn.ham {
+            border-left: 3px solid #27ae60;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            button {
+                padding: 12px 20px;
+                font-size: 0.95em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SMS Spam Detector</h1>
+            <p>Classifie automatiquement un SMS en SPAM ou HAM</p>
+        </div>
+
+        <div class="input-group">
+            <label for="sms-input">Entrez votre SMS:</label>
+            <textarea id="sms-input" placeholder="Collez votre SMS ici... Exemple: 'Send a free text with your mobile'"></textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-predict" onclick="predictSMS()">
+                <span class="spinner" id="spinner"></span>
+                Analyser
+            </button>
+            <button class="btn-clear" onclick="clearForm()">Effacer</button>
+        </div>
+
+        <div class="error" id="error-message"></div>
+
+        <div class="result" id="result">
+            <div class="result-label" id="result-label"></div>
+            
+            <div class="confidence-meter">
+                <div class="confidence-label">
+                    <span>Confiance SPAM:</span>
+                    <span id="spam-percent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="spam-bar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="confidence-meter">
+                <div class="confidence-label">
+                    <span>Confiance HAM:</span>
+                    <span id="ham-percent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="ham-bar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="message-preview">
+                <strong>Message analysé:</strong><br>
+                <span id="message-text"></span>
+            </div>
+        </div>
+
+        <div class="examples">
+            <h3>Exemples à tester:</h3>
+            <button class="example-btn spam" onclick="loadExample('URGENT: Congratulations! You won a FREE iPhone XS! Click here NOW to claim your prize!')">
+                SPAM: "URGENT: Congratulations! You won a FREE iPhone..."
+            </button>
+            <button class="example-btn spam" onclick="loadExample('Send me a free txt with your mobile and I will send you back a surprise')">
+                SPAM: "Send me a free txt with your mobile..."
+            </button>
+            <button class="example-btn ham" onclick="loadExample('Hi John, are we still on for tomorrow at 5pm?')">
+                HAM: "Hi John, are we still on for tomorrow..."
+            </button>
+            <button class="example-btn ham" onclick="loadExample('Would you like to meet up this weekend?')">
+                HAM: "Would you like to meet up this weekend?"
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function predictSMS() {
+            const input = document.getElementById('sms-input').value.trim();
+            const errorDiv = document.getElementById('error-message');
+            const resultDiv = document.getElementById('result');
+            const spinner = document.getElementById('spinner');
+
+            // Réinitialiser l'erreur
+            errorDiv.style.display = 'none';
+
+            if (!input) {
+                errorDiv.textContent = ' Veuillez entrer un SMS';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Afficher le spinner
+            spinner.style.display = 'inline-block';
+            document.querySelector('.btn-predict').disabled = true;
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: input })
+                });
+
+                spinner.style.display = 'none';
+                document.querySelector('.btn-predict').disabled = false;
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erreur serveur');
+                }
+
+                const data = await response.json();
+
+                // Afficher les résultats
+                const resultClass = data.label === 'SPAM' ? 'spam' : 'ham';
+                resultDiv.className = `result ${resultClass}`;
+                resultDiv.style.display = 'block';
+
+                const emoji = data.label === 'SPAM' ? '🚨' : '📨';
+                document.getElementById('result-label').textContent = 
+                    `${emoji} Résultat: ${data.label}`;
+
+                const spamPercent = (data.confidence_spam * 100).toFixed(1);
+                const hamPercent = (data.confidence_ham * 100).toFixed(1);
+
+                document.getElementById('spam-percent').textContent = spamPercent + '%';
+                document.getElementById('ham-percent').textContent = hamPercent + '%';
+                document.getElementById('spam-bar').style.width = spamPercent + '%';
+                document.getElementById('ham-bar').style.width = hamPercent + '%';
+                document.getElementById('message-text').textContent = input;
+
+            } catch (error) {
+                spinner.style.display = 'none';
+                document.querySelector('.btn-predict').disabled = false;
+                errorDiv.textContent = `${error.message}`;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('sms-input').value = '';
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('sms-input').focus();
+        }
+
+        function loadExample(text) {
+            document.getElementById('sms-input').value = text;
+            document.getElementById('sms-input').focus();
+        }
+
+        // Permettre Entrée pour envoyer (Ctrl+Entrée)
+        document.getElementById('sms-input').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                predictSMS();
+            }
+        });
+    </script>
+</body>
+</html>
